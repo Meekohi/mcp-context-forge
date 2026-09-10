@@ -6255,6 +6255,17 @@ ibmcloud-push:
 ibmcloud-deploy:
 	@test -f .env || { echo "❌ Missing .env — run: cp .env.example .env"; exit 1; }
 	@echo "🚀 Deploying image to Code Engine as '$(IBMCLOUD_CODE_ENGINE_APP)' using registry secret $(IBMCLOUD_REGISTRY_SECRET)..."
+	@# Verify the registry pull secret exists before attempting deploy
+	@if ! ibmcloud ce secret get --name $(IBMCLOUD_REGISTRY_SECRET) > /dev/null 2>&1; then \
+		echo "❌ Registry pull secret '$(IBMCLOUD_REGISTRY_SECRET)' not found."; \
+		echo "   Create it first (first-time setup only):"; \
+		echo "   ibmcloud ce secret create --name $(IBMCLOUD_REGISTRY_SECRET) \\"; \
+		echo "       --format registry \\"; \
+		echo "       --server $$(echo $(IBMCLOUD_IMAGE_NAME) | cut -d/ -f1) \\"; \
+		echo "       --username iamapikey --password \$$IBMCLOUD_API_KEY"; \
+		echo "   See the docs for alternative credential types (service ID keys, etc.)."; \
+		exit 1; \
+	fi
 	@# Create the runtime env secret from .env if it does not exist yet
 	@if ! ibmcloud ce secret get --name $(IBMCLOUD_CODE_ENGINE_APP)-env > /dev/null 2>&1; then \
 		echo "🔐 Creating runtime env secret from .env..."; \
